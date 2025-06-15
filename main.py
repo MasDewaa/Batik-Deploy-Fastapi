@@ -35,29 +35,27 @@ def read_root():
 # 6️⃣ Endpoint prediksi (upload image)
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    # Baca gambar
     image = Image.open(file.file).convert("RGB")
     image = image.resize(IMAGE_SIZE)
-    image_array = np.array(image) / 255.0  # normalisasi [0,1]
-    image_array = np.expand_dims(image_array, axis=0)  # tambah batch dimensi
+    image_array = np.array(image) / 255.0
+    image_array = np.expand_dims(image_array, axis=0)
 
-    # Prediksi
     predictions = model.predict(image_array)[0]
-
     prediction_list = [
         {"label": labels[i], "confidence": float(pred)}
         for i, pred in enumerate(predictions)
     ]
     prediction_list.sort(key=lambda x: x["confidence"], reverse=True)
-
-    # Ambil top 5 saja
-    top_predictions = prediction_list[:6]
-
-    # Ambil hasil tertinggi
+    top_predictions = prediction_list[:5]
     top_prediction = top_predictions[0]
 
-    return JSONResponse({
-        "predicted_label": top_prediction["label"],
-        "confidence": top_prediction["confidence"],
-        "top_5_predictions": top_predictions
-    })
+    return {
+        "success": True,
+        "data": {
+            "class_name": top_prediction["label"],
+            "confidence": top_prediction["confidence"],
+            "probabilities": {
+                p["label"]: p["confidence"] for p in top_predictions
+            }
+        }
+    }
