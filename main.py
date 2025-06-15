@@ -1,0 +1,53 @@
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
+import tensorflow as tf
+import numpy as np
+from PIL import Image
+
+# 1️⃣ Inisialisasi FastAPI
+app = FastAPI()
+
+# 2️⃣ Load model Keras
+model = tf.keras.models.load_model("final_tuned_model.keras")
+
+# 3️⃣ Load labels dari file
+with open("labels.txt") as f:
+    labels = [line.strip() for line in f]
+
+# 4️⃣ Ukuran input gambar (samakan dengan training!)
+IMAGE_SIZE = (224, 224)  # contoh, sesuaikan dengan model Anda
+
+# 5️⃣ Endpoint root
+@app.get("/")
+def read_root():
+    return {"message": "FastAPI Batik Classifier is running!"}
+
+# 6️⃣ Endpoint prediksi (upload image)
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    # Baca gambar
+    image = Image.open(file.file).convert("RGB")
+    image = image.resize(IMAGE_SIZE)
+    image_array = np.array(image) / 255.0  # normalisasi [0,1]
+    image_array = np.expand_dims(image_array, axis=0)  # tambah batch dimensi
+
+    # Prediksi
+    predictions = model.predict(image_array)[0]
+
+    prediction_list = [
+        {"label": labels[i], "confidence": float(pred)}
+        for i, pred in enumerate(predictions)
+    ]
+    prediction_list.sort(key=lambda x: x["confidence"], reverse=True)
+
+    # Ambil top 5 saja
+    top_predictions = prediction_list[:6]
+
+    # Ambil hasil tertinggi
+    top_prediction = top_predictions[0]
+
+    return JSONResponse({
+        "predicted_label": top_prediction["label"],
+        "confidence": top_prediction["confidence"],
+        "top_5_predictions": top_predictions
+    })
