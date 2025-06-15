@@ -2,10 +2,20 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 import tensorflow as tf
 import numpy as np
+from fastapi.middleware.cors import CORSMiddleware
+
 from PIL import Image
 
 # 1️⃣ Inisialisasi FastAPI
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # atau ganti dengan ["http://localhost:5173"] untuk lebih aman
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 2️⃣ Load model Keras
 model = tf.keras.models.load_model("final_tuned_model.keras")
